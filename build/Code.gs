@@ -1,11 +1,11 @@
 /**************************************************************************************
  *  Dereknet CLM v5.0 — СОБРАННЫЙ ФАЙЛ
  *  ---------------------------------------------------------------------------------
- *  ⚠️  НЕ РЕДАКТИРОВАТЬ ЗДЕСЬ. Это склейка 11 файлов из src/.
+ *  ⚠️  НЕ РЕДАКТИРОВАТЬ ЗДЕСЬ. Это склейка 12 файлов из src/.
  *      Правки вносятся в src/, затем `npm run build` и повторная вставка.
  *
  *  Собрано: 2026-08-27
- *  Порядок файлов: 01_Config.gs, 02_Setup.gs, 03_Pure.gs, 04_Extract.gs, 05_Lookup.gs, 06_Render.gs, 07_Pipeline.gs, 08_Log.gs, 09_Notify.gs, 10_Menu.gs, 11_WebApp.gs
+ *  Порядок файлов: 01_Config.gs, 02_Setup.gs, 03_Pure.gs, 04_Extract.gs, 05_Lookup.gs, 06_Render.gs, 07_Pipeline.gs, 08_Log.gs, 09_Notify.gs, 10_Menu.gs, 11_WebApp.gs, 12_Template.gs
  **************************************************************************************/
 
 // ══════════════════════════════════════════════════════════════════════
@@ -526,6 +526,12 @@ function healthCheck() {
         warn('В шаблоне НЕТ обязательных плейсхолдеров: ' + missing.join(', '),
              'Договор получится неполным. Добавьте их в шаблон.');
       }
+      var defects = templateIssues_(doc);
+      if (defects.length) {
+        bad('В шаблоне ' + defects.length + ' известных дефекта(ов): ' +
+            defects.map(function (p) { return p.what; }).join('; '),
+            'Меню «CLM» → «🛠» → «🔧 Исправить шаблон»');
+      }
     } catch (e) {
       bad('Шаблон Казахстана не открывается: ' + e.message,
           'Убедитесь, что это Google Документ, а не файл .docx');
@@ -893,6 +899,74 @@ function safeFileName_(name, maxLen) {
     .trim()
     .replace(/ /g, '_');
   return (cleaned || 'partner').slice(0, maxLen || 40);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+//  ОЧИСТКА ДАННЫХ ИЗ РЕЕСТРОВ
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Раскодировать HTML-сущности.
+ *
+ * Источник отдаёт ДВОЙНОЕ кодирование: `&amp;quot;` вместо `&quot;`.
+ * Один проход давал в договоре «АО &quot;НАРОДНЫЙ БАНК КАЗАХСТАНА&quot;»,
+ * потому что `&amp;` заменяется последним и превращал `&amp;quot;` обратно
+ * в текст `&quot;`. Поэтому декодируем до стабилизации, максимум три прохода.
+ */
+function decodeHtmlEntities_(s) {
+  var out = String(s || '');
+  for (var pass = 0; pass < 3; pass++) {
+    var before = out;
+    out = out
+      .replace(/&#x([0-9a-f]+);/gi, function (_, hex) { return String.fromCharCode(parseInt(hex, 16)); })
+      .replace(/&#(\d+);/g, function (_, dec) { return String.fromCharCode(parseInt(dec, 10)); })
+      .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+      .replace(/&laquo;/g, '«').replace(/&raquo;/g, '»')
+      .replace(/&ndash;/g, '–').replace(/&mdash;/g, '—')
+      .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&');
+    if (out === before) break;
+  }
+  return out;
+}
+
+/**
+ * Привести адрес в порядок.
+ *
+ * Реестр отдаёт адрес одним куском текста вместе с соседними предложениями:
+ *   «Юридический адрес компании: A26M3K5, ГОРОД АЛМАТЫ, … Д. 40. Руководитель
+ *    АО "НАРОДНЫЙ БАНК КАЗАХСТАНА" – ШАЯХМЕТОВА УМУТ БОЛАТХАНОВНА.»
+ * Прежняя версия тащила это целиком прямо в договор, в поле «Адрес».
+ *
+ * Возвращает '' если после очистки остался мусор — лучше пустое поле
+ * и требование ручного ввода, чем чужое предложение в реквизитах.
+ */
+function cleanAddress_(raw) {
+  var s = String(raw || '').replace(/\s+/g, ' ').trim();
+
+  // Хвост подписи-метки, оставшийся от вёрстки страницы
+  s = s.replace(/^(?:компании|организации|юр\.?\s*лица|адрес)\s*:?\s*/i, '');
+
+  // Отрезаем всё, что начинается со следующей мысли
+  s = s.split(/\s(?=Руководитель|Первый\s+руководитель|Проверено|Источник|Телефон|Тел\.|Email|ОКЭД|Вид\s+деятельности|Дата\s+регистрации)/i)[0];
+
+  s = s.replace(/[.,;:\s]+$/, '').trim();
+
+  if (s.length > 250 || /Руководитель/i.test(s)) return '';
+  return s;
+}
+
+/**
+ * Кавычки в наименовании: реестр отдаёт `АО "Народный банк"`,
+ * в русскоязычном договоре принято `АО «Народный банк»`.
+ */
+function normalizeCompanyName_(name) {
+  return String(name || '')
+    .replace(/\s+/g, ' ')
+    .replace(/"([^"]+)"/g, '«$1»')
+    .replace(/'([^']+)'/g, '«$1»')
+    .trim();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════
@@ -1330,6 +1404,16 @@ function enrichByBin_(partner) {
     }
   }
 
+  // Кавычки и лишние пробелы приводим к виду, принятому в договорах,
+  // независимо от того, пришло название из реестра или ввёл человек.
+  if (nonEmpty_(partner.PARTNER_NAME)) {
+    partner.PARTNER_NAME = normalizeCompanyName_(partner.PARTNER_NAME);
+  }
+  if (nonEmpty_(partner.ADDRESS)) {
+    var cleaned = cleanAddress_(partner.ADDRESS);
+    if (cleaned) partner.ADDRESS = cleaned;
+  }
+
   // Для ИП руководитель = сам предприниматель.
   if (!nonEmpty_(partner.DIRECTOR) && nonEmpty_(partner.PARTNER_NAME)) {
     var nameStr = String(partner.PARTNER_NAME).trim();
@@ -1474,14 +1558,6 @@ function extractMetaContent_(html, metaName) {
   return m ? m[1] : null;
 }
 
-function decodeHtmlEntities_(s) {
-  return String(s || '')
-    .replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'").replace(/&laquo;/g, '«').replace(/&raquo;/g, '»')
-    .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&');
-}
-
 function parseName_(meta, html) {
   if (meta) {
     var m = meta.match(/^([^,]+(?:,[^,]*?)?)\s*,\s*БИН/);
@@ -1515,10 +1591,10 @@ function parseDirector_(meta, html) {
 }
 
 function parseLegalAddress_(html) {
-  var m = html.match(/(?:Юридический\s+адрес|Адрес\s+регистрации)[:\s]+(?:Рус\s+)?([^<\n]+)/i);
-  if (m) return m[1].replace(/\s+/g, ' ').trim().replace(/[,\s]+$/, '');
+  var m = html.match(/(?:Юридический\s+адрес(?:\s+компании)?|Адрес\s+регистрации)\s*:?\s*(?:Рус\s+)?([^<\n]{5,400})/i);
+  if (m) return cleanAddress_(m[1]);
   var old = html.match(/Юридический\s+адрес[\s\S]{0,200}?Рус([^\n]+?)(?:\s*Проверено|\s*Қаз|\s*Источники|$)/i);
-  if (old) return old[1].replace(/\s+/g, ' ').trim().replace(/[,\s]+$/, '');
+  if (old) return cleanAddress_(old[1]);
   return '';
 }
 
@@ -2787,6 +2863,8 @@ function onOpen() {
       .addItem('🩺 Проверить систему',          'healthCheck')
       .addItem('🚀 Запустить мастер установки', 'menuSetup')
       .addItem('🔍 Найти шаблоны и подпись',    'discoverTemplates')
+      .addItem('🔎 Проверить шаблон',           'checkTemplate')
+      .addItem('🔧 Исправить шаблон',           'fixTemplate')
       .addItem('🔑 Указать ключ OpenAI',        'menuSetOpenAiKey')
       .addItem('📧 Указать email ответственного','menuSetManagerEmail')
       .addSeparator()
@@ -3288,5 +3366,163 @@ function mimeTypeOf_(payload) {
 
 function sec_(startedMs) {
   return ((Date.now() - startedMs) / 1000).toFixed(1);
+}
+
+
+// ══════════════════════════════════════════════════════════════════════
+//  ФАЙЛ: 12_Template.gs
+// ══════════════════════════════════════════════════════════════════════
+
+/**************************************************************************************
+ * Dereknet CLM — 12_Template
+ * ---------------------------------------------------------------------------------
+ * Проверка и правка шаблона NDA.
+ *
+ * Часть ошибок живёт не в коде, а в самом Google Документе: в нём захардкожены
+ * слова, которые должны меняться в зависимости от контрагента, и русские
+ * плейсхолдеры стоят в английской колонке. Код такое исправить на лету не может —
+ * он лишь подставляет значения в те места, которые в шаблоне есть.
+ *
+ * Здесь: `checkTemplate()` находит такие места, `fixTemplate()` правит их один раз.
+ * Обе функции идемпотентны — повторный запуск ничего не портит.
+ **************************************************************************************/
+
+/**
+ * Известные дефекты шаблона.
+ *   find    — регулярное выражение (синтаксис RE2, фигурные скобки экранированы)
+ *   replace — чем заменить
+ *   what    — что не так, человеческим языком
+ *   example — как это выглядит в готовом договоре
+ */
+var TEMPLATE_PATCHES = [
+  {
+    id: 'ПРЕАМБУЛА_ПАДЕЖ',
+    find:    'в лице \\{\\{DISCLOSING_PARTY_REP_POSITION_RU\\}\\} \\{\\{DISCLOSING_PARTY_REP_NAME_RU\\}\\}',
+    replace: 'в лице {{DISCLOSING_PARTY_REP_POSITION_RU_GEN}} {{DISCLOSING_PARTY_REP_NAME_RU_GEN}}',
+    what:    'В преамбуле должность и ФИО стоят в именительном падеже вместо родительного',
+    example: '«в лице Директор Кабдулов Саламат Шамарданович» вместо ' +
+             '«в лице Директора Кабдулова Саламата Шамардановича»'
+  },
+  {
+    id: 'РОД_ЗАРЕГИСТРИРОВАН',
+    find:    '\\{\\{RECEIVING_PARTY_LEGAL_FORM_RU\\}\\}, зарегистрированная',
+    replace: '{{RECEIVING_PARTY_LEGAL_FORM_RU}}, {{RECEIVING_PARTY_REG_AGREEMENT_RU}}',
+    what:    'Слово «зарегистрированная» вписано в шаблон намертво и не согласуется с правовой формой',
+    example: '«акционерное общество, зарегистрированная» вместо «…, зарегистрированное»'
+  },
+  {
+    id: 'АДРЕС_В_АНГЛ_КОЛОНКЕ',
+    find:    'Address: \\{\\{RECEIVING_PARTY_ADDRESS\\}\\}',
+    replace: 'Address: {{RECEIVING_PARTY_ADDRESS_EN}}',
+    what:    'В английской колонке стоит русский адрес',
+    example: '«Address: ГОРОД АЛМАТЫ, ПР. АЛЬ-ФАРАБИ» вместо «Address: GOROD ALMATY, PR. AL-FARABI»'
+  },
+  {
+    id: 'НАЗВАНИЕ_В_АНГЛ_КОЛОНКЕ',
+    find:    'Tax Identification Number: \\{\\{RECEIVING_PARTY_TAX_ID\\}\\}',
+    replace: 'Tax Identification Number: {{RECEIVING_PARTY_TAX_ID_EN}}',
+    what:    'В английской колонке используется русский токен налогового номера',
+    example: 'на вид одинаково, но при смене формата номера колонки разойдутся'
+  }
+];
+
+/** Какие дефекты присутствуют в документе прямо сейчас. */
+function templateIssues_(doc) {
+  var body = doc.getBody();
+  return TEMPLATE_PATCHES.filter(function (p) {
+    try { return body.findText(p.find) !== null; }
+    catch (e) { return false; }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+//  МЕНЮ
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+/** Показать, что не так с шаблоном, ничего не меняя. */
+function checkTemplate() {
+  var ui = SpreadsheetApp.getUi();
+  var id = prop_(PROP.KZ_TEMPLATE_ID);
+  if (!id) {
+    ui.alert('Шаблон не задан', 'Меню «CLM» → «🔍 Найти шаблоны и подпись»', ui.ButtonSet.OK);
+    return;
+  }
+
+  var doc = DocumentApp.openById(id);
+  var issues = templateIssues_(doc);
+
+  if (!issues.length) {
+    ui.alert('✅ Шаблон в порядке',
+      'Известных дефектов не найдено.\n\n' +
+      'Это не заменяет чтение готового договора глазами — ' +
+      'проверяются только те ошибки, которые встречались раньше.',
+      ui.ButtonSet.OK);
+    return;
+  }
+
+  var text = ['В шаблоне «' + doc.getName() + '» найдено проблем: ' + issues.length, ''];
+  issues.forEach(function (p, i) {
+    text.push((i + 1) + '. ' + p.what);
+    text.push('   Пример: ' + p.example);
+    text.push('');
+  });
+  text.push('Исправить: меню «CLM» → «🛠» → «🔧 Исправить шаблон».');
+  ui.alert('⚠️ Шаблон требует правки', text.join('\n'), ui.ButtonSet.OK);
+}
+
+/** Применить правки к шаблону. Спрашивает подтверждение и показывает отчёт. */
+function fixTemplate() {
+  var ui = SpreadsheetApp.getUi();
+  var id = prop_(PROP.KZ_TEMPLATE_ID);
+  if (!id) {
+    ui.alert('Шаблон не задан', 'Меню «CLM» → «🔍 Найти шаблоны и подпись»', ui.ButtonSet.OK);
+    return;
+  }
+
+  var doc = DocumentApp.openById(id);
+  var issues = templateIssues_(doc);
+
+  if (!issues.length) {
+    ui.alert('Нечего исправлять', 'Известных дефектов в шаблоне нет.', ui.ButtonSet.OK);
+    return;
+  }
+
+  var preview = issues.map(function (p, i) { return (i + 1) + '. ' + p.what; }).join('\n');
+  var answer = ui.alert('Исправить шаблон?',
+    'Будет изменён документ «' + doc.getName() + '».\n\n' + preview + '\n\n' +
+    'Изменения затрагивают только служебные подстановки, текст договора не меняется.\n' +
+    'Откатить можно через «Файл → История версий» в самом документе.\n\nПродолжить?',
+    ui.ButtonSet.YES_NO);
+  if (answer !== ui.Button.YES) return;
+
+  var body = doc.getBody();
+  var applied = [];
+  var failed = [];
+
+  issues.forEach(function (p) {
+    try {
+      body.replaceText(p.find, p.replace);
+      applied.push('✅ ' + p.what);
+    } catch (e) {
+      failed.push('❌ ' + p.id + ': ' + e.message);
+    }
+  });
+  doc.saveAndClose();
+
+  // Убеждаемся, что правки действительно легли
+  var remaining = templateIssues_(DocumentApp.openById(id));
+
+  var report = applied.concat(failed);
+  if (remaining.length) {
+    report.push('', '⚠️ Осталось неисправленным: ' + remaining.length +
+                '. Возможно, текст в шаблоне отличается от ожидаемого — ' +
+                'исправьте вручную или пришлите шаблон разработчику.');
+  } else {
+    report.push('', 'Готово. Проверьте результат: «CLM» → «🛠» → «🧪 Тест: собрать пробный договор», ' +
+                'затем создайте один настоящий договор и прочитайте преамбулу.');
+  }
+
+  Logger.log(report.join('\n'));
+  ui.alert('Правка шаблона', report.join('\n'), ui.ButtonSet.OK);
 }
 

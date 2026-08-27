@@ -22,6 +22,8 @@ function onOpen() {
       .addItem('🩺 Проверить систему',          'healthCheck')
       .addItem('🚀 Запустить мастер установки', 'menuSetup')
       .addItem('🔍 Найти шаблоны и подпись',    'discoverTemplates')
+      .addItem('🔎 Проверить шаблон',           'checkTemplate')
+      .addItem('🔧 Исправить шаблон',           'fixTemplate')
       .addItem('🔑 Указать ключ OpenAI',        'menuSetOpenAiKey')
       .addItem('📧 Указать email ответственного','menuSetManagerEmail')
       .addSeparator()

@@ -338,6 +338,12 @@ function healthCheck() {
         warn('В шаблоне НЕТ обязательных плейсхолдеров: ' + missing.join(', '),
              'Договор получится неполным. Добавьте их в шаблон.');
       }
+      var defects = templateIssues_(doc);
+      if (defects.length) {
+        bad('В шаблоне ' + defects.length + ' известных дефекта(ов): ' +
+            defects.map(function (p) { return p.what; }).join('; '),
+            'Меню «CLM» → «🛠» → «🔧 Исправить шаблон»');
+      }
     } catch (e) {
       bad('Шаблон Казахстана не открывается: ' + e.message,
           'Убедитесь, что это Google Документ, а не файл .docx');

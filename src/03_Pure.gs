@@ -247,6 +247,74 @@ function safeFileName_(name, maxLen) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════
+//  ОЧИСТКА ДАННЫХ ИЗ РЕЕСТРОВ
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Раскодировать HTML-сущности.
+ *
+ * Источник отдаёт ДВОЙНОЕ кодирование: `&amp;quot;` вместо `&quot;`.
+ * Один проход давал в договоре «АО &quot;НАРОДНЫЙ БАНК КАЗАХСТАНА&quot;»,
+ * потому что `&amp;` заменяется последним и превращал `&amp;quot;` обратно
+ * в текст `&quot;`. Поэтому декодируем до стабилизации, максимум три прохода.
+ */
+function decodeHtmlEntities_(s) {
+  var out = String(s || '');
+  for (var pass = 0; pass < 3; pass++) {
+    var before = out;
+    out = out
+      .replace(/&#x([0-9a-f]+);/gi, function (_, hex) { return String.fromCharCode(parseInt(hex, 16)); })
+      .replace(/&#(\d+);/g, function (_, dec) { return String.fromCharCode(parseInt(dec, 10)); })
+      .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+      .replace(/&laquo;/g, '«').replace(/&raquo;/g, '»')
+      .replace(/&ndash;/g, '–').replace(/&mdash;/g, '—')
+      .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&');
+    if (out === before) break;
+  }
+  return out;
+}
+
+/**
+ * Привести адрес в порядок.
+ *
+ * Реестр отдаёт адрес одним куском текста вместе с соседними предложениями:
+ *   «Юридический адрес компании: A26M3K5, ГОРОД АЛМАТЫ, … Д. 40. Руководитель
+ *    АО "НАРОДНЫЙ БАНК КАЗАХСТАНА" – ШАЯХМЕТОВА УМУТ БОЛАТХАНОВНА.»
+ * Прежняя версия тащила это целиком прямо в договор, в поле «Адрес».
+ *
+ * Возвращает '' если после очистки остался мусор — лучше пустое поле
+ * и требование ручного ввода, чем чужое предложение в реквизитах.
+ */
+function cleanAddress_(raw) {
+  var s = String(raw || '').replace(/\s+/g, ' ').trim();
+
+  // Хвост подписи-метки, оставшийся от вёрстки страницы
+  s = s.replace(/^(?:компании|организации|юр\.?\s*лица|адрес)\s*:?\s*/i, '');
+
+  // Отрезаем всё, что начинается со следующей мысли
+  s = s.split(/\s(?=Руководитель|Первый\s+руководитель|Проверено|Источник|Телефон|Тел\.|Email|ОКЭД|Вид\s+деятельности|Дата\s+регистрации)/i)[0];
+
+  s = s.replace(/[.,;:\s]+$/, '').trim();
+
+  if (s.length > 250 || /Руководитель/i.test(s)) return '';
+  return s;
+}
+
+/**
+ * Кавычки в наименовании: реестр отдаёт `АО "Народный банк"`,
+ * в русскоязычном договоре принято `АО «Народный банк»`.
+ */
+function normalizeCompanyName_(name) {
+  return String(name || '')
+    .replace(/\s+/g, ' ')
+    .replace(/"([^"]+)"/g, '«$1»')
+    .replace(/'([^']+)'/g, '«$1»')
+    .trim();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════
 //  РАЗБОР ОТВЕТА МОДЕЛИ
 // ═══════════════════════════════════════════════════════════════════════════════════
 
@@ -318,6 +386,7 @@ if (typeof module !== 'undefined' && module.exports) {
     transliterateRuToEn_, inferLegalFormRu_, inferLegalFormEn_,
     inferRegAgreementRu_, inferRepPositionRu_, inferRepPositionEn_,
     safeFileName_, parseJsonLoose_, nonEmpty_, humanizeError_,
+    decodeHtmlEntities_, cleanAddress_, normalizeCompanyName_,
     KNOWN_TOKENS, REQUIRED_KZ_TOKENS, ERROR_HELP
   };
 }

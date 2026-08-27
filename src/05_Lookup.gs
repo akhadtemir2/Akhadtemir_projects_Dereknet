@@ -67,6 +67,16 @@ function enrichByBin_(partner) {
     }
   }
 
+  // Кавычки и лишние пробелы приводим к виду, принятому в договорах,
+  // независимо от того, пришло название из реестра или ввёл человек.
+  if (nonEmpty_(partner.PARTNER_NAME)) {
+    partner.PARTNER_NAME = normalizeCompanyName_(partner.PARTNER_NAME);
+  }
+  if (nonEmpty_(partner.ADDRESS)) {
+    var cleaned = cleanAddress_(partner.ADDRESS);
+    if (cleaned) partner.ADDRESS = cleaned;
+  }
+
   // Для ИП руководитель = сам предприниматель.
   if (!nonEmpty_(partner.DIRECTOR) && nonEmpty_(partner.PARTNER_NAME)) {
     var nameStr = String(partner.PARTNER_NAME).trim();
@@ -211,14 +221,6 @@ function extractMetaContent_(html, metaName) {
   return m ? m[1] : null;
 }
 
-function decodeHtmlEntities_(s) {
-  return String(s || '')
-    .replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'").replace(/&laquo;/g, '«').replace(/&raquo;/g, '»')
-    .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&');
-}
-
 function parseName_(meta, html) {
   if (meta) {
     var m = meta.match(/^([^,]+(?:,[^,]*?)?)\s*,\s*БИН/);
@@ -252,10 +254,10 @@ function parseDirector_(meta, html) {
 }
 
 function parseLegalAddress_(html) {
-  var m = html.match(/(?:Юридический\s+адрес|Адрес\s+регистрации)[:\s]+(?:Рус\s+)?([^<\n]+)/i);
-  if (m) return m[1].replace(/\s+/g, ' ').trim().replace(/[,\s]+$/, '');
+  var m = html.match(/(?:Юридический\s+адрес(?:\s+компании)?|Адрес\s+регистрации)\s*:?\s*(?:Рус\s+)?([^<\n]{5,400})/i);
+  if (m) return cleanAddress_(m[1]);
   var old = html.match(/Юридический\s+адрес[\s\S]{0,200}?Рус([^\n]+?)(?:\s*Проверено|\s*Қаз|\s*Источники|$)/i);
-  if (old) return old[1].replace(/\s+/g, ' ').trim().replace(/[,\s]+$/, '');
+  if (old) return cleanAddress_(old[1]);
   return '';
 }
 
