@@ -96,7 +96,7 @@ var DEREKNET = {
   ADDR_RU:             '060016, Республика Казахстан, г. Атырау, ул. Сатпаева 23А',
   ADDR_EN:             '060016, Republic of Kazakhstan, Atyrau, 23A Satpayev Street',
   PHONE:               '+7 702 672 45 07',
-  EMAIL:               'info@dereknet.com',
+  EMAIL:               'office@dereknet.com',
   IIK:                 'KZ41601A141000897321',
   BIK:                 'HSBKKZKX',
   BANK_RU:             'АО «Народный банк Казахстана»',
