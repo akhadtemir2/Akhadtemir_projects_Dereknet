@@ -35,35 +35,38 @@ var FOLDER_LAYOUT = [
  */
 function setupWizard(rootFolderId) {
   var report = [];
-  var created = {};
+
+  // ВАЖНО: каждый созданный объект записывается в настройки СРАЗУ, а не пачкой
+  // в конце. Иначе прерванный запуск (обрыв на экране авторизации, ошибка прав)
+  // оставляет созданную папку «сиротой»: ID нигде не сохранён, и следующий
+  // запуск создаёт вторую папку с тем же именем. Так и появлялись дубли.
 
   // ── 1. Корневая папка ───────────────────────────────────────────────────────
   var root = resolveOrCreateRoot_(rootFolderId, report);
-  created[PROP.ROOT_FOLDER_ID] = root.getId();
+  setProp_(PROP.ROOT_FOLDER_ID, root.getId());
 
   // ── 2. Рабочие папки ────────────────────────────────────────────────────────
   FOLDER_LAYOUT.forEach(function (spec) {
     var f = resolveOrCreateChildFolder_(root, prop_(spec.prop), spec.name, report);
-    created[spec.prop] = f.getId();
+    setProp_(spec.prop, f.getId());
   });
 
   // ── 3. Журнал (Google Таблица) ──────────────────────────────────────────────
-  var sheetId = resolveOrCreateLogSheet_(root, prop_(PROP.LOG_SHEET_ID), report);
-  created[PROP.LOG_SHEET_ID] = sheetId;
+  setProp_(PROP.LOG_SHEET_ID,
+           resolveOrCreateLogSheet_(root, prop_(PROP.LOG_SHEET_ID), report));
 
   // ── 4. Email ответственного ─────────────────────────────────────────────────
   if (!prop_(PROP.MANAGER_EMAIL)) {
     var me = safeActiveEmail_();
     if (me) {
-      created[PROP.MANAGER_EMAIL] = me;
+      setProp_(PROP.MANAGER_EMAIL, me);
       report.push('✅ Email для уведомлений: ' + me + ' (можно изменить в настройках)');
     } else {
       report.push('⚠️ Не удалось определить email — задайте MANAGER_EMAIL вручную');
     }
   }
 
-  created[PROP.SETUP_VERSION] = SETUP_VERSION;
-  setProps_(created);
+  setProp_(PROP.SETUP_VERSION, SETUP_VERSION);
 
   // ── 5. Журнал: создать листы и справочник ошибок ────────────────────────────
   ensureLogSheets_();
@@ -104,6 +107,8 @@ function pendingManualSteps_() {
 //  СОЗДАНИЕ ОБЪЕКТОВ
 // ═══════════════════════════════════════════════════════════════════════════════════
 
+var ROOT_FOLDER_NAME = 'Dereknet CLM';
+
 function resolveOrCreateRoot_(explicitId, report) {
   var id = explicitId || prop_(PROP.ROOT_FOLDER_ID);
   if (id) {
@@ -112,12 +117,42 @@ function resolveOrCreateRoot_(explicitId, report) {
       report.push('✅ Корневая папка: ' + existing.getName() + ' (уже существует)');
       return existing;
     } catch (e) {
-      report.push('⚠️ Прежняя корневая папка недоступна — создаю новую');
+      report.push('⚠️ Прежняя корневая папка недоступна — ищу другую');
     }
   }
-  var root = DriveApp.createFolder('Dereknet CLM');
-  report.push('✅ Создана корневая папка «Dereknet CLM»');
+
+  // Прежде чем создавать новую — поискать по имени. Защита от дублей, если
+  // предыдущий запуск оборвался до записи ID (см. комментарий в setupWizard).
+  var candidates = [];
+  var it = DriveApp.getFoldersByName(ROOT_FOLDER_NAME);
+  while (it.hasNext() && candidates.length < 10) candidates.push(it.next());
+
+  if (candidates.length === 1) {
+    report.push('✅ Найдена существующая папка «' + ROOT_FOLDER_NAME + '» — использую её');
+    return candidates[0];
+  }
+
+  if (candidates.length > 1) {
+    // Берём ту, где уже есть рабочие подпапки; при равенстве — самую старую.
+    var best = candidates.filter(hasWorkSubfolders_)[0] ||
+               candidates.sort(function (a, b) {
+                 return a.getDateCreated().getTime() - b.getDateCreated().getTime();
+               })[0];
+    report.push('⚠️ В Диске несколько папок «' + ROOT_FOLDER_NAME + '» (' + candidates.length + ' шт.). ' +
+                'Использую ту, где есть рабочие подпапки. Лишние можно удалить вручную — ' +
+                'в них ничего нет.');
+    return best;
+  }
+
+  var root = DriveApp.createFolder(ROOT_FOLDER_NAME);
+  report.push('✅ Создана корневая папка «' + ROOT_FOLDER_NAME + '»');
   return root;
+}
+
+/** Похожа ли папка на рабочий корень CLM: есть ли внутри «1. Входящие». */
+function hasWorkSubfolders_(folder) {
+  try { return folder.getFoldersByName(FOLDER_LAYOUT[0].name).hasNext(); }
+  catch (e) { return false; }
 }
 
 function resolveOrCreateChildFolder_(root, existingId, name, report) {
@@ -258,6 +293,21 @@ function healthCheck() {
       bad('Папка «' + spec.name + '» недоступна (удалена или нет прав)', 'Запустите мастер установки');
     }
   });
+
+  // Дубли корневой папки — след прерванной установки
+  try {
+    var dupes = [];
+    var dupIt = DriveApp.getFoldersByName(ROOT_FOLDER_NAME);
+    while (dupIt.hasNext() && dupes.length < 10) dupes.push(dupIt.next());
+    if (dupes.length > 1) {
+      var liveRootId = prop_(PROP.ROOT_FOLDER_ID);
+      var extra = dupes.filter(function (f) { return f.getId() !== liveRootId; })
+                       .map(function (f) { return f.getUrl(); });
+      warn('В Диске ' + dupes.length + ' папки с именем «' + ROOT_FOLDER_NAME + '»',
+           'Рабочая — та, что используется системой. Лишние можно удалить, в них ничего нет:\n     ' +
+           extra.join('\n     '));
+    }
+  } catch (e) { /* не критично */ }
 
   // Журнал
   lines.push('', '— Журнал —');
