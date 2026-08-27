@@ -37,6 +37,7 @@ var PROP = {
   KZ_TEMPLATE_ID:    'KZ_TEMPLATE_ID',
   US_TEMPLATE_ID:    'US_TEMPLATE_ID',
   SIGNATURE_FILE_ID: 'SIGNATURE_FILE_ID',
+  SIGNATURE_WIDTH_PT:'SIGNATURE_WIDTH_PT',
   OPENAI_API_KEY:    'OPENAI_API_KEY',
   MANAGER_EMAIL:     'MANAGER_EMAIL',
   LEGAL_EMAIL:       'LEGAL_EMAIL',
@@ -79,7 +80,13 @@ var CFG = {
   BIN_CACHE_SECONDS:    6 * 60 * 60,
   STUCK_FILE_MINUTES:   60,
 
-  SIGNATURE_MAX_WIDTH_PT: 200,
+  // Ширина подписи в договоре. 1 мм = 2.8346 pt.
+  // 40 мм (≈113 pt) — обычный размер росчерка в договоре; прежние 200 pt (7 см)
+  // занимали половину строки подписей и выглядели плакатом.
+  SIGNATURE_DEFAULT_WIDTH_PT: 113,
+  SIGNATURE_MIN_WIDTH_PT:      28,   // 10 мм
+  SIGNATURE_MAX_WIDTH_PT:     283,   // 100 мм
+  PT_PER_MM: 2.8346,
 
   VISION_ALLOWED_MIMES: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'],
   IMAGE_SIG_MIMES:      ['image/png', 'image/jpeg', 'image/gif'],
@@ -558,7 +565,9 @@ function healthCheck() {
       if (CFG.IMAGE_SIG_MIMES.indexOf(sf.getMimeType()) === -1) {
         bad('Файл подписи не картинка (' + sf.getMimeType() + ')', 'Нужен PNG, JPEG или GIF');
       } else {
-        ok('Подпись: ' + sf.getName());
+        ok('Подпись: ' + sf.getName() + ' — ширина в договоре ' +
+           Math.round(signatureWidthPt_() / CFG.PT_PER_MM) + ' мм' +
+           ' (изменить: «✍️ Размер подписи»)');
       }
     } catch (e) { bad('Файл подписи недоступен: ' + e.message); }
   }
@@ -1887,16 +1896,24 @@ function findLeftoverTokens_(docId) {
   return extractTokens_(text);
 }
 
+/** Заданная ширина подписи в пунктах, с проверкой границ. */
+function signatureWidthPt_() {
+  var raw = parseFloat(prop_(PROP.SIGNATURE_WIDTH_PT));
+  if (!raw || isNaN(raw)) return CFG.SIGNATURE_DEFAULT_WIDTH_PT;
+  return Math.min(CFG.SIGNATURE_MAX_WIDTH_PT, Math.max(CFG.SIGNATURE_MIN_WIDTH_PT, raw));
+}
+
 /**
  * Подпись директора. Шаблон содержит несколько якорей {{SIGNATURE_BOSS}}
  * (соглашение RU/EN + приложение RU/EN) — обрабатываем все.
  *
- * Картинка вставляется в натуральном размере и уменьшается пропорционально,
- * только если шире 200 pt. Старая версия жёстко ставила 160×60 и растягивала
- * подпись, если пропорции отличались от 8:3.
+ * Картинка приводится к заданной ширине с сохранением пропорций, одинаково
+ * во всех местах и во всех договорах. Раньше размер зависел от разрешения
+ * исходного PNG и мог занимать до 7 см — половину строки подписей.
  */
 function insertSignature_(doc, sigFileId) {
   var token = '\\{\\{SIGNATURE_BOSS\\}\\}';
+  var targetW = signatureWidthPt_();
   var blob = null;
 
   if (sigFileId) {
@@ -1931,10 +1948,7 @@ function insertSignature_(doc, sigFileId) {
         try {
           var img = par.appendInlineImage(blob);
           var w = img.getWidth(), h = img.getHeight();
-          if (w > CFG.SIGNATURE_MAX_WIDTH_PT) {
-            img.setWidth(CFG.SIGNATURE_MAX_WIDTH_PT)
-               .setHeight(Math.round(h * CFG.SIGNATURE_MAX_WIDTH_PT / w));
-          }
+          if (w > 0) img.setWidth(targetW).setHeight(Math.round(h * targetW / w));
         } catch (e) {
           par.setText('_______________');
         }
@@ -2865,6 +2879,7 @@ function onOpen() {
       .addItem('🔍 Найти шаблоны и подпись',    'discoverTemplates')
       .addItem('🔎 Проверить шаблон',           'checkTemplate')
       .addItem('🔧 Исправить шаблон',           'fixTemplate')
+      .addItem('✍️ Размер подписи',             'menuSignatureSize')
       .addItem('🔑 Указать ключ OpenAI',        'menuSetOpenAiKey')
       .addItem('📧 Указать email ответственного','menuSetManagerEmail')
       .addSeparator()
@@ -3468,6 +3483,100 @@ function checkTemplate() {
   });
   text.push('Исправить: меню «CLM» → «🛠» → «🔧 Исправить шаблон».');
   ui.alert('⚠️ Шаблон требует правки', text.join('\n'), ui.ButtonSet.OK);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+//  РАЗМЕР ПОДПИСИ
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Задать ширину подписи в миллиметрах и сразу увидеть результат.
+ *
+ * Подбирать размер вслепую бессмысленно, поэтому функция создаёт временный
+ * документ с образцом и даёт на него ссылку. Не понравилось — запустить снова
+ * с другим числом.
+ */
+function menuSignatureSize() {
+  var ui = SpreadsheetApp.getUi();
+  var sigId = prop_(PROP.SIGNATURE_FILE_ID);
+  if (!sigId) {
+    ui.alert('Подпись не задана', 'Меню «CLM» → «🔍 Найти шаблоны и подпись»', ui.ButtonSet.OK);
+    return;
+  }
+
+  var currentMm = Math.round(signatureWidthPt_() / CFG.PT_PER_MM);
+  var resp = ui.prompt('Размер подписи',
+    'Ширина подписи в договоре, в миллиметрах.\n\n' +
+    'Сейчас: ' + currentMm + ' мм\n' +
+    'Обычный размер росчерка в договоре: 35–45 мм\n' +
+    'Допустимо: от 10 до 100 мм\n\n' +
+    'Введите число:',
+    ui.ButtonSet.OK_CANCEL);
+  if (resp.getSelectedButton() !== ui.Button.OK) return;
+
+  var mm = parseFloat(String(resp.getResponseText()).replace(',', '.'));
+  if (!mm || isNaN(mm)) {
+    ui.alert('Не число', 'Введите, например: 40', ui.ButtonSet.OK);
+    return;
+  }
+
+  var pt = Math.round(mm * CFG.PT_PER_MM);
+  if (pt < CFG.SIGNATURE_MIN_WIDTH_PT || pt > CFG.SIGNATURE_MAX_WIDTH_PT) {
+    ui.alert('Вне допустимых границ', 'Нужно от 10 до 100 мм.', ui.ButtonSet.OK);
+    return;
+  }
+  setProp_(PROP.SIGNATURE_WIDTH_PT, pt);
+
+  var url = buildSignaturePreview_(sigId, pt, mm);
+  ui.alert('Размер сохранён: ' + mm + ' мм',
+    (url
+      ? 'Образец для сравнения — откройте и посмотрите:\n\n' + url +
+        '\n\nНе подошло — запустите этот пункт меню ещё раз с другим числом.\n' +
+        'Временный документ можно удалить.'
+      : 'Образец создать не удалось, но размер сохранён. Проверьте на пробном договоре.') +
+    '\n\nНовый размер применится к договорам, созданным после этого момента. ' +
+    'Уже созданные не меняются.',
+    ui.ButtonSet.OK);
+}
+
+/** Временный документ с образцом подписи в блоке подписей. */
+function buildSignaturePreview_(sigFileId, pt, mm) {
+  try {
+    var file = DriveApp.getFileById(sigFileId);
+    var blob = Utilities.newBlob(file.getBlob().getBytes(), file.getMimeType(), 'signature');
+
+    var doc = DocumentApp.create('ОБРАЗЕЦ подписи ' + mm + 'мм — можно удалить');
+    var body = doc.getBody();
+
+    body.appendParagraph('Так подпись будет выглядеть в договоре (' + mm + ' мм)')
+        .setHeading(DocumentApp.ParagraphHeading.HEADING3);
+    body.appendParagraph('Раскрывающая сторона:');
+    body.appendParagraph(DEREKNET.NAME_RU);
+
+    var par = body.appendParagraph('');
+    var img = par.appendInlineImage(blob);
+    var w = img.getWidth(), h = img.getHeight();
+    if (w > 0) img.setWidth(pt).setHeight(Math.round(h * pt / w));
+
+    body.appendParagraph(DEREKNET.REP_POSITION_RU + ', ' + DEREKNET.REP_NAME_RU);
+    body.appendParagraph('(Ф.И.О., должность)').setItalic(true);
+
+    if (w > 0 && w < pt) {
+      body.appendParagraph('');
+      body.appendParagraph(
+        '⚠️ Исходная картинка уже (' + Math.round(w / CFG.PT_PER_MM) + ' мм), ' +
+        'её пришлось растянуть — подпись может выглядеть размыто. ' +
+        'Лучше пересохранить PNG с большим разрешением.'
+      ).setItalic(true);
+    }
+
+    doc.saveAndClose();
+    DriveApp.getFileById(doc.getId()).moveTo(DriveApp.getFolderById(prop_(PROP.TEMPLATE_FOLDER_ID)));
+    return doc.getUrl();
+  } catch (e) {
+    Logger.log('Образец подписи не создался: ' + e);
+    return '';
+  }
 }
 
 /** Применить правки к шаблону. Спрашивает подтверждение и показывает отчёт. */

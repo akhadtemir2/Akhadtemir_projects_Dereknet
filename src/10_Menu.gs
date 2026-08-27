@@ -24,6 +24,7 @@ function onOpen() {
       .addItem('🔍 Найти шаблоны и подпись',    'discoverTemplates')
       .addItem('🔎 Проверить шаблон',           'checkTemplate')
       .addItem('🔧 Исправить шаблон',           'fixTemplate')
+      .addItem('✍️ Размер подписи',             'menuSignatureSize')
       .addItem('🔑 Указать ключ OpenAI',        'menuSetOpenAiKey')
       .addItem('📧 Указать email ответственного','menuSetManagerEmail')
       .addSeparator()

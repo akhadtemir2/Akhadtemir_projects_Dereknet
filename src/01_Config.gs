@@ -23,6 +23,7 @@ var PROP = {
   KZ_TEMPLATE_ID:    'KZ_TEMPLATE_ID',
   US_TEMPLATE_ID:    'US_TEMPLATE_ID',
   SIGNATURE_FILE_ID: 'SIGNATURE_FILE_ID',
+  SIGNATURE_WIDTH_PT:'SIGNATURE_WIDTH_PT',
   OPENAI_API_KEY:    'OPENAI_API_KEY',
   MANAGER_EMAIL:     'MANAGER_EMAIL',
   LEGAL_EMAIL:       'LEGAL_EMAIL',
@@ -65,7 +66,13 @@ var CFG = {
   BIN_CACHE_SECONDS:    6 * 60 * 60,
   STUCK_FILE_MINUTES:   60,
 
-  SIGNATURE_MAX_WIDTH_PT: 200,
+  // Ширина подписи в договоре. 1 мм = 2.8346 pt.
+  // 40 мм (≈113 pt) — обычный размер росчерка в договоре; прежние 200 pt (7 см)
+  // занимали половину строки подписей и выглядели плакатом.
+  SIGNATURE_DEFAULT_WIDTH_PT: 113,
+  SIGNATURE_MIN_WIDTH_PT:      28,   // 10 мм
+  SIGNATURE_MAX_WIDTH_PT:     283,   // 100 мм
+  PT_PER_MM: 2.8346,
 
   VISION_ALLOWED_MIMES: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'],
   IMAGE_SIG_MIMES:      ['image/png', 'image/jpeg', 'image/gif'],

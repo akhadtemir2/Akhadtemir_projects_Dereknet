@@ -227,16 +227,24 @@ function findLeftoverTokens_(docId) {
   return extractTokens_(text);
 }
 
+/** Заданная ширина подписи в пунктах, с проверкой границ. */
+function signatureWidthPt_() {
+  var raw = parseFloat(prop_(PROP.SIGNATURE_WIDTH_PT));
+  if (!raw || isNaN(raw)) return CFG.SIGNATURE_DEFAULT_WIDTH_PT;
+  return Math.min(CFG.SIGNATURE_MAX_WIDTH_PT, Math.max(CFG.SIGNATURE_MIN_WIDTH_PT, raw));
+}
+
 /**
  * Подпись директора. Шаблон содержит несколько якорей {{SIGNATURE_BOSS}}
  * (соглашение RU/EN + приложение RU/EN) — обрабатываем все.
  *
- * Картинка вставляется в натуральном размере и уменьшается пропорционально,
- * только если шире 200 pt. Старая версия жёстко ставила 160×60 и растягивала
- * подпись, если пропорции отличались от 8:3.
+ * Картинка приводится к заданной ширине с сохранением пропорций, одинаково
+ * во всех местах и во всех договорах. Раньше размер зависел от разрешения
+ * исходного PNG и мог занимать до 7 см — половину строки подписей.
  */
 function insertSignature_(doc, sigFileId) {
   var token = '\\{\\{SIGNATURE_BOSS\\}\\}';
+  var targetW = signatureWidthPt_();
   var blob = null;
 
   if (sigFileId) {
@@ -271,10 +279,7 @@ function insertSignature_(doc, sigFileId) {
         try {
           var img = par.appendInlineImage(blob);
           var w = img.getWidth(), h = img.getHeight();
-          if (w > CFG.SIGNATURE_MAX_WIDTH_PT) {
-            img.setWidth(CFG.SIGNATURE_MAX_WIDTH_PT)
-               .setHeight(Math.round(h * CFG.SIGNATURE_MAX_WIDTH_PT / w));
-          }
+          if (w > 0) img.setWidth(targetW).setHeight(Math.round(h * targetW / w));
         } catch (e) {
           par.setText('_______________');
         }

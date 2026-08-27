@@ -370,7 +370,9 @@ function healthCheck() {
       if (CFG.IMAGE_SIG_MIMES.indexOf(sf.getMimeType()) === -1) {
         bad('Файл подписи не картинка (' + sf.getMimeType() + ')', 'Нужен PNG, JPEG или GIF');
       } else {
-        ok('Подпись: ' + sf.getName());
+        ok('Подпись: ' + sf.getName() + ' — ширина в договоре ' +
+           Math.round(signatureWidthPt_() / CFG.PT_PER_MM) + ' мм' +
+           ' (изменить: «✍️ Размер подписи»)');
       }
     } catch (e) { bad('Файл подписи недоступен: ' + e.message); }
   }
