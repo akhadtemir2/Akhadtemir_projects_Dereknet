@@ -1,6 +1,6 @@
 {
-  "_комментарий": "Скопируйте в .clasp.json и впишите scriptId вашего проекта. Настоящий .clasp.json в git не попадает — он в .gitignore.",
-  "_где_взять_scriptId": "Редактор Apps Script → ⚙️ Настройки проекта → «Идентификатор скрипта»",
+  "_": "Нужен только если проект УЖЕ создан. Для нового проще: clasp create --title 'Dereknet CLM' --type sheets --rootDir src — он сам напишет .clasp.json",
+  "_scriptId": "Редактор Apps Script → ⚙️ Настройки проекта → «Идентификатор скрипта»",
   "scriptId": "ВСТАВЬТЕ_СЮДА_SCRIPT_ID",
   "rootDir": "src"
 }

@@ -147,11 +147,38 @@ function resolveOrCreateLogSheet_(root, existingId, report) {
       return existingId;
     } catch (e) { /* пересоздадим */ }
   }
+
+  // Если скрипт привязан к таблице (обычный случай: Расширения → Apps Script
+  // или `clasp create --type sheets`) — журналом становится она сама.
+  // Отдельная вторая таблица только запутала бы: меню в одной, данные в другой.
+  var bound = null;
+  try { bound = SpreadsheetApp.getActiveSpreadsheet(); } catch (e) { /* standalone */ }
+  if (bound) {
+    report.push('✅ Журнал — эта же таблица «' + bound.getName() + '»');
+    try {
+      var boundFile = DriveApp.getFileById(bound.getId());
+      if (!isChildOf_(boundFile, root)) {
+        boundFile.moveTo(root);
+        report.push('✅ Таблица перемещена в папку CLM');
+      }
+    } catch (e) {
+      report.push('⚠️ Таблицу не удалось переместить в папку CLM — она останется там, где лежит');
+    }
+    return bound.getId();
+  }
+
   var ss = SpreadsheetApp.create('Dereknet CLM — Журнал');
-  var file = DriveApp.getFileById(ss.getId());
-  file.moveTo(root);
+  DriveApp.getFileById(ss.getId()).moveTo(root);
   report.push('✅ Создан журнал «Dereknet CLM — Журнал»');
   return ss.getId();
+}
+
+function isChildOf_(file, folder) {
+  var parents = file.getParents();
+  while (parents.hasNext()) {
+    if (parents.next().getId() === folder.getId()) return true;
+  }
+  return false;
 }
 
 /**
