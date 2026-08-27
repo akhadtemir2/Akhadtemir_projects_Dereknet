@@ -1,0 +1,20 @@
+# Секреты и локальная привязка к проекту Apps Script
+.clasp.json
+.clasprc.json
+*.key
+.env
+.env.*
+
+# Node
+node_modules/
+
+# Системное
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Сгенерированные договоры — не место в репозитории:
+# в них персональные данные и реквизиты контрагентов
+NDA_*.pdf
+NDA_*.docx
+!*_TEMPLATE*.docx
