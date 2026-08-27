@@ -997,6 +997,26 @@ function nonEmpty_(v) {
   return v !== null && v !== undefined && String(v).trim() !== '';
 }
 
+/**
+ * Цель договора — только метаданные для реестра.
+ *
+ * В текст казахстанского шаблона она НЕ попадает: там нет соответствующего
+ * плейсхолдера. Форма раньше предлагала выбор, который ни на что не влиял, —
+ * теперь это честно подписано, а значение уходит в реестр, чтобы через год
+ * можно было найти «все NDA по трудовым отношениям».
+ */
+var PURPOSE_LABELS = {
+  'Business Partnership': 'Деловое сотрудничество',
+  'Contract Work':        'Выполнение работ / услуг',
+  'Employment':           'Трудовые отношения',
+  'Sale of a Business':   'Продажа бизнеса или доли',
+  'Other':                'Другое'
+};
+
+function purposeLabel_(code) {
+  return PURPOSE_LABELS[code] || String(code || '');
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════════
 //  ЧЕЛОВЕЧЕСКИЕ ОШИБКИ
 // ═══════════════════════════════════════════════════════════════════════════════════
@@ -2341,10 +2361,12 @@ var LOG_HEADERS = [
   'Время обработки, с', 'Токены', 'Уверенность'
 ];
 
+// Порядок колонок менять осторожно: apiRecentContracts (11_WebApp.gs) читает
+// их по номерам, а тест сверяет число заголовков с числом записываемых значений.
 var REGISTER_HEADERS = [
   '№ договора', 'Дата', 'Страна', 'Контрагент', 'БИН',
   'Руководитель', 'Юридический адрес', 'Статус контрагента',
-  'Договор', 'PDF', 'Инициатор', 'Статус подписания', 'Комментарий'
+  'Договор', 'PDF', 'Инициатор', 'Статус подписания', 'Цель', 'Комментарий'
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════════
@@ -2495,6 +2517,7 @@ function appendRegisterRow_(number, country, p, out, requester) {
       linkFormula_(out.pdfUrl, 'PDF'),
       requester || '',
       'Черновик',
+      purposeLabel_(p.PURPOSE),
       (p._WARNINGS || []).join('; ')
     ]);
   } catch (e) {
@@ -3192,7 +3215,9 @@ function apiCreateContract(form) {
       BIN:          normalizeBin_(form.bin),
       DIRECTOR:     String(form.director || '').trim(),
       ADDRESS:      String(form.address || '').trim(),
-      NDA_TYPE:     form.ndaType || 'Mutual',
+      // Действующий шаблон Казахстана — односторонний: раскрывает Dereknet.
+      // Выбора у пользователя нет, поэтому и не спрашиваем.
+      NDA_TYPE:     (country === 'USA') ? (form.ndaType || 'Mutual') : 'Unilateral',
       PURPOSE:      form.purpose || 'Business Partnership',
       EMAIL:        String(form.email || '').trim(),
       _confidence:  'high'

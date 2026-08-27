@@ -192,18 +192,11 @@
       <div class="step-title"><span class="step-num">3</span> Условия договора</div>
       <p class="hint">Если не уверены — оставьте как есть, это подходит в большинстве случаев.</p>
 
-      <label>Вид соглашения о неразглашении</label>
-      <div class="choice">
-        <label id="tMutual" class="on">
-          <input type="radio" name="ndaType" value="Mutual" checked onchange="pick('ndaType','tMutual','tUni')">
-          Взаимный
-          <span class="sub">Обе стороны раскрывают друг другу информацию</span>
-        </label>
-        <label id="tUni">
-          <input type="radio" name="ndaType" value="Unilateral" onchange="pick('ndaType','tUni','tMutual')">
-          Односторонний
-          <span class="sub">Информацию раскрывает только Dereknet</span>
-        </label>
+      <div class="banner warn" style="margin-top:0">
+        <b>Вид соглашения: односторонний</b>
+        Конфиденциальную информацию раскрывает Dereknet, контрагент её получает
+        и обязуется не разглашать. Так устроен действующий шаблон — выбора здесь нет.
+        Нужен взаимный (обе стороны раскрывают) — обратитесь к юристу, его готовят отдельно.
       </div>
 
       <label for="purpose">Для чего заключается</label>
@@ -214,6 +207,9 @@
         <option value="Sale of a Business">Продажа бизнеса или доли</option>
         <option value="Other">Другое</option>
       </select>
+      <div class="field-note dim">
+        В текст договора не попадает — нужно, чтобы потом находить документы в реестре.
+      </div>
 
       <label for="email">Куда прислать договор</label>
       <input type="email" id="email" placeholder="ваш@dereknet.com">
@@ -272,10 +268,6 @@ function setMode(mode) {
   $('checkResult').innerHTML = '';
 }
 
-function pick(group, onId, offId) {
-  $(onId).classList.add('on');
-  $(offId).classList.remove('on');
-}
 
 // ═══════════════════════════════════════════════════════════════════
 //  Проверка БИН прямо в браузере — мгновенная подсказка
@@ -494,7 +486,6 @@ function createContract() {
       name: $('name').value.trim(),
       director: $('director').value.trim(),
       address: $('address').value.trim(),
-      ndaType: document.querySelector('input[name=ndaType]:checked').value,
       purpose: $('purpose').value,
       email: $('email').value.trim(),
       country: state.country

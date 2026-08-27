@@ -110,7 +110,9 @@ function apiCreateContract(form) {
       BIN:          normalizeBin_(form.bin),
       DIRECTOR:     String(form.director || '').trim(),
       ADDRESS:      String(form.address || '').trim(),
-      NDA_TYPE:     form.ndaType || 'Mutual',
+      // Действующий шаблон Казахстана — односторонний: раскрывает Dereknet.
+      // Выбора у пользователя нет, поэтому и не спрашиваем.
+      NDA_TYPE:     (country === 'USA') ? (form.ndaType || 'Mutual') : 'Unilateral',
       PURPOSE:      form.purpose || 'Business Partnership',
       EMAIL:        String(form.email || '').trim(),
       _confidence:  'high'
