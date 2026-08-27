@@ -307,8 +307,10 @@ function humanizeError_(code, technicalMessage) {
          (technicalMessage ? '\n\n(технические детали: ' + technicalMessage + ')' : '');
 }
 
+/* build:strip-start */
 // ═══════════════════════════════════════════════════════════════════════════════════
-//  ЭКСПОРТ ДЛЯ ЛОКАЛЬНЫХ ТЕСТОВ (в Apps Script этот блок игнорируется)
+//  ЭКСПОРТ ДЛЯ ЛОКАЛЬНЫХ ТЕСТОВ
+//  В Apps Script не нужен (там нет module), поэтому вырезается при `npm run build`.
 // ═══════════════════════════════════════════════════════════════════════════════════
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -319,3 +321,4 @@ if (typeof module !== 'undefined' && module.exports) {
     KNOWN_TOKENS, REQUIRED_KZ_TOKENS, ERROR_HELP
   };
 }
+/* build:strip-end */

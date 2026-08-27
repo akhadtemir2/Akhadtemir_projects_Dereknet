@@ -1,0 +1,557 @@
+<!-- Dereknet CLM — форма заявки на договор.
+     Интерфейс рассчитан на сотрудника без ИТ-подготовки:
+     один экран, крупный шрифт, подсказки простым языком,
+     каждая ошибка объясняет, что именно сделать. -->
+<style>
+  :root {
+    --blue: #1a73e8; --blue-dark: #1557b0; --green: #1e8e3e; --red: #d93025;
+    --amber: #f9ab00; --ink: #202124; --muted: #5f6368; --line: #dadce0; --bg: #f6f8fc;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.55 -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 24px 18px 60px; }
+
+  header { margin-bottom: 20px; }
+  .brand { font-size: 12px; letter-spacing: 1.2px; color: var(--muted); font-weight: 600; }
+  h1 { font-size: 26px; margin: 4px 0 6px; font-weight: 600; }
+  .lede { color: var(--muted); font-size: 15px; margin: 0; }
+
+  .tabs { display: flex; gap: 6px; margin: 18px 0; }
+  .tab {
+    flex: 1; padding: 11px; border: 1px solid var(--line); background: #fff;
+    border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 500; color: var(--muted);
+  }
+  .tab.on { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+  .card {
+    background: #fff; border: 1px solid var(--line); border-radius: 12px;
+    padding: 22px; margin-bottom: 16px;
+  }
+  .step-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%; background: var(--blue);
+    color: #fff; font-size: 14px; font-weight: 700; margin-right: 9px;
+  }
+  .step-title { display: flex; align-items: center; font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+  .hint { color: var(--muted); font-size: 14px; margin: 0 0 16px 35px; }
+
+  label { display: block; font-weight: 500; font-size: 14px; margin: 14px 0 5px; }
+  .req::after { content: " *"; color: var(--red); }
+  input[type=text], input[type=email], select, textarea {
+    width: 100%; padding: 12px 13px; font-size: 16px; font-family: inherit;
+    border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink);
+  }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--blue); border-color: var(--blue); }
+  textarea { resize: vertical; min-height: 62px; }
+  #bin { font-size: 22px; letter-spacing: 3px; font-variant-numeric: tabular-nums; }
+  .field-note { font-size: 13px; margin-top: 5px; min-height: 18px; }
+  .field-note.ok { color: var(--green); }
+  .field-note.err { color: var(--red); }
+  .field-note.dim { color: var(--muted); }
+
+  .choice { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .choice label {
+    flex: 1; min-width: 200px; margin: 0; padding: 13px 15px; border: 2px solid var(--line);
+    border-radius: 9px; cursor: pointer; font-weight: 500; background: #fff;
+  }
+  .choice label.on { border-color: var(--blue); background: #e8f0fe; }
+  .choice input { margin-right: 8px; }
+  .choice .sub { display: block; font-weight: 400; font-size: 13px; color: var(--muted); margin-top: 3px; }
+
+  button {
+    font: inherit; font-weight: 600; border: none; border-radius: 8px;
+    padding: 13px 22px; cursor: pointer;
+  }
+  .btn-main { background: var(--blue); color: #fff; font-size: 16px; }
+  .btn-main:hover { background: var(--blue-dark); }
+  .btn-go { background: var(--green); color: #fff; font-size: 17px; width: 100%; padding: 16px; }
+  .btn-ghost { background: #fff; color: var(--blue); border: 1px solid var(--line); }
+  button:disabled { background: #e8eaed !important; color: #9aa0a6 !important; cursor: not-allowed; }
+
+  .drop {
+    border: 2px dashed var(--line); border-radius: 10px; padding: 30px 20px;
+    text-align: center; cursor: pointer; background: #fafbfc;
+  }
+  .drop:hover, .drop.over { border-color: var(--blue); background: #e8f0fe; }
+  .drop .big { font-size: 34px; }
+
+  .banner { padding: 14px 16px; border-radius: 8px; margin: 14px 0; font-size: 15px; }
+  .banner b { display: block; margin-bottom: 4px; font-size: 16px; }
+  .banner.ok   { background: #e6f4ea; border-left: 4px solid var(--green); }
+  .banner.warn { background: #fef7e0; border-left: 4px solid var(--amber); }
+  .banner.err  { background: #fce8e6; border-left: 4px solid var(--red); }
+  .banner.risk { background: #fce8e6; border-left: 4px solid var(--red); }
+  .banner ul { margin: 6px 0 0; padding-left: 20px; }
+
+  .kv { font-size: 15px; }
+  .kv div { display: flex; padding: 6px 0; border-bottom: 1px solid #f1f3f4; }
+  .kv span:first-child { color: var(--muted); min-width: 140px; }
+  .kv span:last-child { font-weight: 500; }
+
+  .spinner {
+    display: inline-block; width: 17px; height: 17px; vertical-align: -3px;
+    border: 2.5px solid rgba(255,255,255,.4); border-top-color: #fff;
+    border-radius: 50%; animation: spin .7s linear infinite; margin-right: 9px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .hidden { display: none !important; }
+
+  table.list { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.list th { text-align: left; color: var(--muted); font-weight: 500; padding: 9px 8px; border-bottom: 2px solid var(--line); }
+  table.list td { padding: 11px 8px; border-bottom: 1px solid #f1f3f4; vertical-align: top; }
+  table.list a { color: var(--blue); text-decoration: none; font-weight: 500; }
+
+  .footnote { color: var(--muted); font-size: 13px; text-align: center; margin-top: 26px; }
+  @media (max-width: 560px) {
+    h1 { font-size: 22px; } .card { padding: 17px; } .hint { margin-left: 0; }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brand">DEREKNET</div>
+    <h1>Заявка на договор NDA</h1>
+    <p class="lede">Заполните форму — договор придёт вам на почту в течение минуты.</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab on" id="tabNew"    onclick="showTab('new')">Новая заявка</button>
+    <button class="tab"    id="tabRecent" onclick="showTab('recent')">Мои договоры</button>
+  </div>
+
+  <!-- ═══════════ НОВАЯ ЗАЯВКА ═══════════ -->
+  <div id="paneNew">
+
+    <!-- Шаг 1 -->
+    <div class="card">
+      <div class="step-title"><span class="step-num">1</span> Кто контрагент?</div>
+      <p class="hint">Выберите, что у вас есть под рукой.</p>
+
+      <div class="choice" style="margin-left:35px">
+        <label id="mBin" class="on">
+          <input type="radio" name="mode" value="bin" checked onchange="setMode('bin')">
+          Знаю БИН
+          <span class="sub">12 цифр из счёта или договора</span>
+        </label>
+        <label id="mFile">
+          <input type="radio" name="mode" value="file" onchange="setMode('file')">
+          Есть документ
+          <span class="sub">Фото или PDF — распознаем сами</span>
+        </label>
+      </div>
+
+      <!-- Ввод БИН -->
+      <div id="blockBin" style="margin-left:35px">
+        <label for="bin" class="req">БИН контрагента</label>
+        <input type="text" id="bin" inputmode="numeric" maxlength="17"
+               placeholder="000000000000" autocomplete="off"
+               oninput="onBinInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();checkBin();}">
+        <div class="field-note dim" id="binNote">Введите 12 цифр</div>
+        <button class="btn-main" id="btnCheck" onclick="checkBin()" disabled>Проверить контрагента</button>
+      </div>
+
+      <!-- Загрузка файла -->
+      <div id="blockFile" class="hidden" style="margin-left:35px">
+        <div class="drop" id="drop" onclick="document.getElementById('file').click()">
+          <div class="big">📄</div>
+          <div style="font-weight:600;margin-top:6px">Нажмите или перетащите файл сюда</div>
+          <div style="color:var(--muted);font-size:14px;margin-top:4px">
+            PDF, JPG или PNG — счёт, свидетельство, реквизиты. До 20 МБ.
+          </div>
+        </div>
+        <input type="file" id="file" class="hidden"
+               accept=".pdf,.jpg,.jpeg,.png,.gif,.webp" onchange="uploadFile()">
+        <div class="field-note dim" id="fileNote"></div>
+      </div>
+
+      <div id="checkResult"></div>
+    </div>
+
+    <!-- Шаг 2 -->
+    <div class="card hidden" id="cardDetails">
+      <div class="step-title"><span class="step-num">2</span> Проверьте данные</div>
+      <p class="hint">Так они попадут в договор. Исправьте, если что-то не совпадает с оригиналом.</p>
+
+      <label for="name" class="req">Полное наименование</label>
+      <input type="text" id="name" placeholder="ТОО «Пример»">
+
+      <label for="director" class="req">ФИО руководителя</label>
+      <input type="text" id="director" placeholder="Иванов Иван Иванович">
+
+      <label for="address" class="req">Юридический адрес</label>
+      <textarea id="address" placeholder="050000, г. Алматы, ул. Абая, 10"></textarea>
+      <div class="field-note dim">Обязательно с номером дома.</div>
+    </div>
+
+    <!-- Шаг 3 -->
+    <div class="card hidden" id="cardTerms">
+      <div class="step-title"><span class="step-num">3</span> Условия договора</div>
+      <p class="hint">Если не уверены — оставьте как есть, это подходит в большинстве случаев.</p>
+
+      <label>Вид соглашения о неразглашении</label>
+      <div class="choice">
+        <label id="tMutual" class="on">
+          <input type="radio" name="ndaType" value="Mutual" checked onchange="pick('ndaType','tMutual','tUni')">
+          Взаимный
+          <span class="sub">Обе стороны раскрывают друг другу информацию</span>
+        </label>
+        <label id="tUni">
+          <input type="radio" name="ndaType" value="Unilateral" onchange="pick('ndaType','tUni','tMutual')">
+          Односторонний
+          <span class="sub">Информацию раскрывает только Dereknet</span>
+        </label>
+      </div>
+
+      <label for="purpose">Для чего заключается</label>
+      <select id="purpose">
+        <option value="Business Partnership">Деловое сотрудничество</option>
+        <option value="Contract Work">Выполнение работ / услуг по договору</option>
+        <option value="Employment">Трудовые отношения</option>
+        <option value="Sale of a Business">Продажа бизнеса или доли</option>
+        <option value="Other">Другое</option>
+      </select>
+
+      <label for="email">Куда прислать договор</label>
+      <input type="email" id="email" placeholder="ваш@dereknet.com">
+      <div class="field-note dim">На этот адрес придёт письмо со ссылкой на договор и PDF.</div>
+
+      <div style="margin-top:22px">
+        <button class="btn-go" id="btnCreate" onclick="createContract()">Создать договор</button>
+      </div>
+      <div id="createResult"></div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════ МОИ ДОГОВОРЫ ═══════════ -->
+  <div id="paneRecent" class="hidden">
+    <div class="card">
+      <div id="recentBody" style="color:var(--muted)">Загружаю…</div>
+    </div>
+  </div>
+
+  <p class="footnote">
+    Договор создаётся как <b>черновик</b> — перед отправкой контрагенту его должен посмотреть человек.<br>
+    Вопросы: <a href="mailto:office@dereknet.com">office@dereknet.com</a>
+  </p>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  Состояние
+// ═══════════════════════════════════════════════════════════════════
+var state = { mode: 'bin', bin: '', country: 'Kazakhstan', ready: false };
+
+window.addEventListener('load', function () {
+  google.script.run.withSuccessHandler(function (r) {
+    if (r && r.email) document.getElementById('email').value = r.email;
+  }).apiWhoAmI();
+});
+
+function $(id) { return document.getElementById(id); }
+
+function showTab(which) {
+  var isNew = which === 'new';
+  $('tabNew').classList.toggle('on', isNew);
+  $('tabRecent').classList.toggle('on', !isNew);
+  $('paneNew').classList.toggle('hidden', !isNew);
+  $('paneRecent').classList.toggle('hidden', isNew);
+  if (!isNew) loadRecent();
+}
+
+function setMode(mode) {
+  state.mode = mode;
+  $('mBin').classList.toggle('on', mode === 'bin');
+  $('mFile').classList.toggle('on', mode === 'file');
+  $('blockBin').classList.toggle('hidden', mode !== 'bin');
+  $('blockFile').classList.toggle('hidden', mode !== 'file');
+  $('checkResult').innerHTML = '';
+}
+
+function pick(group, onId, offId) {
+  $(onId).classList.add('on');
+  $(offId).classList.remove('on');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  Проверка БИН прямо в браузере — мгновенная подсказка
+//  (то же самое проверяется ещё раз на сервере)
+// ═══════════════════════════════════════════════════════════════════
+function binChecksumOk(s) {
+  if (!/^\d{12}$/.test(s)) return false;
+  var d = s.split('').map(Number);
+  var w1 = [1,2,3,4,5,6,7,8,9,10,11], w2 = [3,4,5,6,7,8,9,10,11,1,2];
+  function ctrl(w) { var t = 0; for (var i = 0; i < 11; i++) t += d[i] * w[i]; return t % 11; }
+  var c = ctrl(w1);
+  if (c === 10) { c = ctrl(w2); if (c === 10) return false; }
+  return c === d[11];
+}
+
+function onBinInput() {
+  var digits = $('bin').value.replace(/\D/g, '').slice(0, 12);
+  $('bin').value = digits;
+  var note = $('binNote'), btn = $('btnCheck');
+
+  if (digits.length === 0)      { note.className = 'field-note dim'; note.textContent = 'Введите 12 цифр'; btn.disabled = true; return; }
+  if (digits.length < 12)       { note.className = 'field-note dim'; note.textContent = 'Осталось цифр: ' + (12 - digits.length); btn.disabled = true; return; }
+  if (!binChecksumOk(digits))   { note.className = 'field-note err'; note.textContent = '✗ В номере опечатка — контрольная цифра не сходится'; btn.disabled = true; return; }
+
+  note.className = 'field-note ok';
+  note.textContent = '✓ БИН корректный';
+  btn.disabled = false;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  Шаг 1 — проверка контрагента
+// ═══════════════════════════════════════════════════════════════════
+function checkBin() {
+  var btn = $('btnCheck');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Проверяю в реестрах…';
+  $('checkResult').innerHTML = '';
+
+  google.script.run
+    .withSuccessHandler(function (r) {
+      btn.disabled = false;
+      btn.textContent = 'Проверить контрагента';
+      if (!r.ok) return showBanner('checkResult', 'err', r.title, r.advice);
+
+      state.bin = r.bin;
+      state.country = 'Kazakhstan';
+
+      if (r.risks && r.risks.length) {
+        showBanner('checkResult', 'risk', '🛑 Работать с этим контрагентом опасно',
+          'В государственных реестрах есть отметки: ' + r.risks.join(', ') +
+          '. Договор создать нельзя. Сообщите руководителю.');
+        $('cardDetails').classList.add('hidden');
+        $('cardTerms').classList.add('hidden');
+        return;
+      }
+
+      if (r.found) {
+        var rows = [
+          ['Наименование', r.name], ['Руководитель', r.director], ['Адрес', r.address],
+          ['Статус', r.status], ['Вид деятельности', r.oked], ['Регистрация', r.regDate]
+        ].filter(function (x) { return x[1]; })
+         .map(function (x) { return '<div><span>' + x[0] + '</span><span>' + esc(x[1]) + '</span></div>'; })
+         .join('');
+        $('checkResult').innerHTML =
+          '<div class="banner ok"><b>✓ Контрагент найден</b>' +
+          '<div class="kv" style="margin-top:8px">' + rows + '</div>' +
+          '<div style="font-size:13px;color:var(--muted);margin-top:8px">Источник: ' + esc(r.source || '—') + '</div></div>';
+        $('name').value = r.name || '';
+        $('director').value = r.director || '';
+        $('address').value = r.address || '';
+      } else {
+        showBanner('checkResult', 'warn', 'БИН правильный, но данных в реестрах нет', r.note);
+      }
+
+      openNextSteps();
+    })
+    .withFailureHandler(function (e) {
+      btn.disabled = false;
+      btn.textContent = 'Проверить контрагента';
+      showBanner('checkResult', 'err', 'Связь с сервером прервалась', 'Попробуйте ещё раз через минуту. ' + e.message);
+    })
+    .apiCheckBin($('bin').value);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  Загрузка документа
+// ═══════════════════════════════════════════════════════════════════
+(function initDrop() {
+  var drop = $('drop');
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); });
+  });
+  ['dragleave', 'drop'].forEach(function (ev) {
+    drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); });
+  });
+  drop.addEventListener('drop', function (e) {
+    if (e.dataTransfer.files.length) { $('file').files = e.dataTransfer.files; uploadFile(); }
+  });
+})();
+
+function uploadFile() {
+  var f = $('file').files[0];
+  if (!f) return;
+  var note = $('fileNote');
+
+  if (f.size > 20 * 1024 * 1024) {
+    note.className = 'field-note err';
+    note.textContent = 'Файл больше 20 МБ. Сожмите его или сфотографируйте заново.';
+    return;
+  }
+
+  note.className = 'field-note dim';
+  note.innerHTML = '<span class="spinner" style="border-color:#ccc;border-top-color:#666"></span>Читаю «' + esc(f.name) + '»… это занимает 10–30 секунд';
+  $('checkResult').innerHTML = '';
+
+  var reader = new FileReader();
+  reader.onload = function (e) {
+    var base64 = e.target.result.split(',')[1];
+    google.script.run
+      .withSuccessHandler(function (r) {
+        note.textContent = '';
+        if (!r.ok) return showBanner('checkResult', 'err', r.title, r.advice);
+
+        state.country = r.country;
+        state.bin = r.bin || '';
+        $('name').value = r.name || '';
+        $('director').value = r.director || '';
+        $('address').value = r.address || '';
+
+        var msgs = [];
+        if (r.binProblem) msgs.push(r.binProblem);
+        if (r.confidence === 'medium') msgs.push('Часть данных распознана неуверенно — проверьте особенно внимательно.');
+
+        showBanner('checkResult', msgs.length ? 'warn' : 'ok',
+          msgs.length ? 'Прочитано, но нужна ваша проверка' : '✓ Документ прочитан',
+          (msgs.length ? msgs.join(' ') + ' ' : '') + 'Сверьте поля ниже с оригиналом.');
+
+        if (r.bin) { $('bin').value = r.bin; onBinInput(); }
+        openNextSteps();
+      })
+      .withFailureHandler(function (err) {
+        note.className = 'field-note err';
+        note.textContent = 'Не удалось отправить файл: ' + err.message;
+      })
+      .apiRecognizeUpload({ data: base64, mimeType: f.type, fileName: f.name });
+  };
+  reader.readAsDataURL(f);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  Шаг 3 — создание договора
+// ═══════════════════════════════════════════════════════════════════
+function openNextSteps() {
+  state.ready = true;
+  $('cardDetails').classList.remove('hidden');
+  $('cardTerms').classList.remove('hidden');
+  $('cardDetails').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function createContract() {
+  var required = [['name', 'наименование'], ['director', 'ФИО руководителя'], ['address', 'адрес']];
+  var empty = required.filter(function (f) { return !$(f[0]).value.trim(); });
+  if (empty.length) {
+    showBanner('createResult', 'err', 'Заполните обязательные поля',
+      'Не хватает: ' + empty.map(function (f) { return f[1]; }).join(', ') + '.');
+    return;
+  }
+
+  var btn = $('btnCreate');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Собираю договор…';
+  $('createResult').innerHTML = '';
+
+  google.script.run
+    .withSuccessHandler(function (r) {
+      btn.disabled = false;
+      btn.textContent = 'Создать договор';
+
+      if (!r.ok) return showBanner('createResult', r.kind === 'risk' ? 'risk' : 'err', r.title, r.advice);
+
+      var extra = '';
+      if (r.lookupWarning) {
+        extra += '<div style="margin-top:10px;font-size:14px">⚠️ Контрагента не удалось проверить в реестрах автоматически — ' +
+                 'проверьте его на <a href="https://kgd.gov.kz/ru/services/taxpayer_search" target="_blank">kgd.gov.kz</a> ' +
+                 'перед подписанием.</div>';
+      }
+      if (r.warnings && r.warnings.length) {
+        extra += '<ul style="margin-top:8px">' + r.warnings.map(function (w) { return '<li>' + esc(w) + '</li>'; }).join('') + '</ul>';
+      }
+
+      $('createResult').innerHTML =
+        '<div class="banner ok" style="margin-top:18px">' +
+        '<b>✓ Договор ' + esc(r.number) + ' готов</b>' +
+        'Контрагент: ' + esc(r.partnerName) + extra +
+        '<div style="margin-top:14px">' +
+        '<a href="' + r.docUrl + '" target="_blank"><button class="btn-main">Открыть договор</button></a> ' +
+        '<a href="' + r.pdfUrl + '" target="_blank"><button class="btn-ghost">Скачать PDF</button></a>' +
+        '</div>' +
+        (r.emailedTo ? '<div style="font-size:13px;color:var(--muted);margin-top:12px">Копия отправлена на ' + esc(r.emailedTo) + '</div>' : '') +
+        '<div style="font-size:14px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(0,0,0,.08)">' +
+        '<b>Перед отправкой контрагенту проверьте:</b> название и БИН, ФИО руководителя, ' +
+        'полный адрес, наличие подписи директора.</div>' +
+        '</div>' +
+        '<button class="btn-ghost" style="width:100%;margin-top:12px" onclick="resetForm()">Создать ещё один договор</button>';
+
+      $('createResult').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    })
+    .withFailureHandler(function (e) {
+      btn.disabled = false;
+      btn.textContent = 'Создать договор';
+      showBanner('createResult', 'err', 'Связь с сервером прервалась',
+        'Договор мог не создаться. Откройте вкладку «Мои договоры» и проверьте. Детали: ' + e.message);
+    })
+    .apiCreateContract({
+      bin: state.bin || $('bin').value,
+      name: $('name').value.trim(),
+      director: $('director').value.trim(),
+      address: $('address').value.trim(),
+      ndaType: document.querySelector('input[name=ndaType]:checked').value,
+      purpose: $('purpose').value,
+      email: $('email').value.trim(),
+      country: state.country
+    });
+}
+
+function resetForm() {
+  ['bin', 'name', 'director', 'address'].forEach(function (id) { $(id).value = ''; });
+  $('file').value = '';
+  ['checkResult', 'createResult', 'fileNote'].forEach(function (id) { $(id).innerHTML = ''; });
+  $('cardDetails').classList.add('hidden');
+  $('cardTerms').classList.add('hidden');
+  state = { mode: state.mode, bin: '', country: 'Kazakhstan', ready: false };
+  onBinInput();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  Мои договоры
+// ═══════════════════════════════════════════════════════════════════
+function loadRecent() {
+  $('recentBody').innerHTML = '<span class="spinner" style="border-color:#ccc;border-top-color:#666"></span>Загружаю…';
+  google.script.run
+    .withSuccessHandler(function (r) {
+      if (!r.ok) { $('recentBody').textContent = r.title + '. ' + r.advice; return; }
+      if (!r.rows.length) {
+        $('recentBody').innerHTML = 'Договоров пока нет.<br>Создайте первый на вкладке «Новая заявка».';
+        return;
+      }
+      var html = '<table class="list"><tr><th>Номер</th><th>Дата</th><th>Контрагент</th><th>Статус</th><th></th></tr>';
+      r.rows.forEach(function (row) {
+        html += '<tr>' +
+          '<td><b>' + esc(row.number) + '</b></td>' +
+          '<td>' + esc(row.date) + '</td>' +
+          '<td>' + esc(row.partner) + (row.bin ? '<br><span style="color:var(--muted);font-size:12px">БИН ' + esc(row.bin) + '</span>' : '') + '</td>' +
+          '<td>' + esc(row.status) + '</td>' +
+          '<td>' + (row.docUrl ? '<a href="' + row.docUrl + '" target="_blank">договор</a> ' : '') +
+                   (row.pdfUrl ? '<a href="' + row.pdfUrl + '" target="_blank">PDF</a>' : '') + '</td>' +
+          '</tr>';
+      });
+      $('recentBody').innerHTML = html + '</table>';
+    })
+    .withFailureHandler(function (e) { $('recentBody').textContent = 'Не удалось загрузить: ' + e.message; })
+    .apiRecentContracts();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  Утилиты
+// ═══════════════════════════════════════════════════════════════════
+function showBanner(containerId, kind, title, text) {
+  $(containerId).innerHTML =
+    '<div class="banner ' + kind + '"><b>' + esc(title) + '</b>' + esc(text).replace(/\n/g, '<br>') + '</div>';
+}
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+</script>

@@ -4,6 +4,7 @@
   "private": true,
   "description": "Автоматическое создание договоров NDA для ТОО «Dereknet» на Google Workspace",
   "scripts": {
+    "build": "node tools/build.js",
     "test": "node tests/syntax.test.js && node tests/pure.test.js",
     "test:pure": "node tests/pure.test.js",
     "test:syntax": "node tests/syntax.test.js",

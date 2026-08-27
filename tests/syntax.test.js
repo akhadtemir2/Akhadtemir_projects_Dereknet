@@ -177,6 +177,30 @@ report(uncovered.length === 0,
   `все ${thrownCodes.length} кодов ошибок объяснены пользователю`,
   'нет объяснения для: ' + uncovered.join(', '));
 
+// ── 10. build/ должен соответствовать src/ ──────────────────────────
+// Из build/Code.gs код вставляют в Apps Script руками. Если он отстал
+// от src/, в бой уедет старая версия — молча и незаметно.
+console.log('\nАктуальность собранного файла');
+const { buildCode } = require(path.join(__dirname, '..', 'tools', 'build.js'));
+const buildPath = path.join(__dirname, '..', 'build', 'Code.gs');
+
+if (!fs.existsSync(buildPath)) {
+  report(false, 'build/Code.gs существует', 'запустите: npm run build');
+} else {
+  // Дата сборки в шапке меняется каждый день — сравниваем без неё.
+  const normalize = s => s.replace(/^ \* {2}Собрано: .*$/m, '').replace(/\r\n/g, '\n');
+  const same = normalize(fs.readFileSync(buildPath, 'utf8')) === normalize(buildCode());
+  report(same, 'build/Code.gs совпадает с src/', 'src/ изменился — запустите: npm run build');
+}
+
+['Index.html', 'appsscript.json'].forEach(name => {
+  const a = path.join(__dirname, '..', 'build', name);
+  const b = path.join(SRC, name);
+  if (!fs.existsSync(a)) return report(false, 'build/' + name, 'запустите: npm run build');
+  const same = fs.readFileSync(a, 'utf8') === fs.readFileSync(b, 'utf8');
+  report(same, 'build/' + name + ' совпадает с src/', 'запустите: npm run build');
+});
+
 console.log('\n' + '─'.repeat(60));
 console.log(errors ? `Ошибок: ${errors}` : 'Все проверки пройдены.');
 process.exit(errors ? 1 : 0);
