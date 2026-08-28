@@ -9,6 +9,7 @@
 | Dereknet CLM | [`Dereknet CLM/`](./Dereknet%20CLM/) | Система управления жизненным циклом договоров (Google Apps Script). Подробности — в [README проекта](./Dereknet%20CLM/README.md). |
 | Jarvis (MARK L) | [`Jarvis/`](./Jarvis/) | Голосовой AI-ассистент на PyQt6 (Gemini Live / OpenAI Realtime). Запуск — в [QUICKSTART.md](./Jarvis/QUICKSTART.md). |
 | TimeSystem | [`TimeSystem/`](./TimeSystem/) | Учёт посещаемости по распознаванию лиц + Telegram-бот (Python, DeepFace, Docker/Railway). Запуск — в [QUICKSTART.md](./TimeSystem/QUICKSTART.md). |
+| BaitechProjects | [`BaitechProjects/`](./BaitechProjects/) | Flutter-дашборд проектов BaiTech: канбан, дедлайны, голосовые задачи (Supabase + OpenAI). Запуск — в [QUICKSTART.md](./BaitechProjects/QUICKSTART.md). |
 
 ## Структура
 
@@ -16,7 +17,8 @@
 .
 ├── Dereknet CLM/      # система управления договорами (Google Apps Script)
 ├── Jarvis/            # голосовой AI-ассистент MARK L (Python / PyQt6)
-└── TimeSystem/        # учёт посещаемости по лицам + Telegram-бот (Python)
+├── TimeSystem/        # учёт посещаемости по лицам + Telegram-бот (Python)
+└── BaitechProjects/   # Flutter-дашборд проектов BaiTech (Supabase + OpenAI)
 ```
 
 ## Как добавлять новый проект
