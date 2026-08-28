@@ -1,0 +1,37 @@
+# Pinned to exact, known-good versions for reproducible installs and to avoid
+# pulling an unexpected (or compromised) "latest" on every install.
+# To refresh after testing a newer version:  pip install -U <pkg> && pip freeze | grep <pkg>
+
+PyQt6==6.11.0
+sounddevice==0.5.5
+google-genai==2.12.1
+google-generativeai==0.8.6
+openai==2.41.1            # gpt-4o-transcribe speech-to-text (core/stt.py)
+pillow==12.2.0
+requests==2.34.2
+beautifulsoup4==4.14.3
+ddgs==9.14.4              # DuckDuckGo search (replaces the renamed duckduckgo-search)
+playwright==1.58.0
+pyautogui==0.9.54
+pyperclip==1.11.0
+pygetwindow==0.0.9
+opencv-python==4.13.0.92
+numpy==2.4.2
+mss==10.2.0
+psutil==7.1.0
+send2trash==2.1.0
+youtube-transcript-api==1.2.4
+python-pptx==1.0.2
+fastapi==0.136.3
+uvicorn[standard]==0.49.0
+cryptography==46.0.5
+python-multipart==0.0.32
+comtypes==1.4.16 ; sys_platform == "win32"
+pycaw==20251023 ; sys_platform == "win32"
+win10toast==0.9 ; sys_platform == "win32"
+pywinauto==0.6.9 ; sys_platform == "win32"
+pywin32==311 ; sys_platform == "win32"
+qrcode[pil]==8.2
+fastembed==0.8.0          # local ONNX embeddings for the semantic second-brain (memory/brain.py)
+python-docx==1.2.0        # Word .docx read/write (actions/word_control.py)
+mcp==2.0.0                # Model Context Protocol client — external tool servers (core/mcp_client.py)

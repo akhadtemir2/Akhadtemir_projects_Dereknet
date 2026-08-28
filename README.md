@@ -7,12 +7,14 @@
 | Проект | Папка | Описание |
 |--------|-------|----------|
 | Dereknet CLM | [`Dereknet CLM/`](./Dereknet%20CLM/) | Система управления жизненным циклом договоров (Google Apps Script). Подробности — в [README проекта](./Dereknet%20CLM/README.md). |
+| Jarvis (MARK L) | [`Jarvis/`](./Jarvis/) | Голосовой AI-ассистент на PyQt6 (Gemini Live / OpenAI Realtime). Запуск — в [QUICKSTART.md](./Jarvis/QUICKSTART.md). |
 
 ## Структура
 
 ```
 .
-└── Dereknet CLM/      # первый проект (весь код и документы внутри)
+├── Dereknet CLM/      # система управления договорами (Google Apps Script)
+└── Jarvis/            # голосовой AI-ассистент MARK L (Python / PyQt6)
 ```
 
 ## Как добавлять новый проект

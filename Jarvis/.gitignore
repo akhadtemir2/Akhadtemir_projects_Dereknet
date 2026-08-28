@@ -1,0 +1,36 @@
+# ── Secrets & user data (NEVER commit) ──────────────────────────────
+config/api_keys.json
+config/certs/*.key
+config/certs/*.pem
+memory/long_term.json
+
+# ── Python ──────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# ── Virtual environments ────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Tooling / IDE ───────────────────────────────────────────────────
+.vscode/
+.idea/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# ── OS cruft ────────────────────────────────────────────────────────
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# ── Runtime artifacts ───────────────────────────────────────────────
+*.log
+face.png
