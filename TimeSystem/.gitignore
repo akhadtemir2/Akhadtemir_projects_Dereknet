@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+env/
+venv/
+ENV/
+
+# Data files
+attendance.json
+faces_data.pkl
+*.pkl
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Railway / Render local
+.env
+.env.local

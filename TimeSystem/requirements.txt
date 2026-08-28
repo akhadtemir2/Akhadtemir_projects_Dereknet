@@ -1,0 +1,7 @@
+numpy==1.26.4
+Pillow==10.3.0
+opencv-python-headless==4.9.0.80
+tensorflow-cpu==2.16.1
+tf-keras==2.16.0
+deepface==0.0.93
+python-telegram-bot==20.7

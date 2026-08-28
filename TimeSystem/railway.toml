@@ -1,0 +1,9 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "bash start.sh"
+restartPolicyType = "always"
+healthcheckPath = "/api/status"
+healthcheckTimeout = 100
