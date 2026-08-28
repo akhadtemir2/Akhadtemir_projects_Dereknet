@@ -10,6 +10,7 @@
 | Jarvis (MARK L) | [`Jarvis/`](./Jarvis/) | Голосовой AI-ассистент на PyQt6 (Gemini Live / OpenAI Realtime). Запуск — в [QUICKSTART.md](./Jarvis/QUICKSTART.md). |
 | TimeSystem | [`TimeSystem/`](./TimeSystem/) | Учёт посещаемости по распознаванию лиц + Telegram-бот (Python, DeepFace, Docker/Railway). Запуск — в [QUICKSTART.md](./TimeSystem/QUICKSTART.md). |
 | BaitechProjects | [`BaitechProjects/`](./BaitechProjects/) | Flutter-дашборд проектов BaiTech: канбан, дедлайны, голосовые задачи (Supabase + OpenAI). Запуск — в [QUICKSTART.md](./BaitechProjects/QUICKSTART.md). |
+| Leads_platform | [`Leads_platform/`](./Leads_platform/) | Платформа сбора лидов из Instagram/Telegram/2GIS с AI-скорингом (React + FastAPI + Supabase). Запуск — в [QUICKSTART.md](./Leads_platform/QUICKSTART.md). |
 
 ## Структура
 
@@ -18,7 +19,8 @@
 ├── Dereknet CLM/      # система управления договорами (Google Apps Script)
 ├── Jarvis/            # голосовой AI-ассистент MARK L (Python / PyQt6)
 ├── TimeSystem/        # учёт посещаемости по лицам + Telegram-бот (Python)
-└── BaitechProjects/   # Flutter-дашборд проектов BaiTech (Supabase + OpenAI)
+├── BaitechProjects/   # Flutter-дашборд проектов BaiTech (Supabase + OpenAI)
+└── Leads_platform/    # сбор лидов IG/TG/2GIS + AI-скоринг (React + FastAPI)
 ```
 
 ## Как добавлять новый проект

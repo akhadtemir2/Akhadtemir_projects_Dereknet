@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment variables — NEVER commit these
+backend/.env
+.env
+.env.local
+.env.production
+
+# Telethon session — contains private keys
+backend/tg_session.session
+backend/tg_session.session-journal
+backend/ig_sessions/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.venv/
+venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+
+# graphify knowledge graph output (local analysis, not part of the app)
+graphify-out/
